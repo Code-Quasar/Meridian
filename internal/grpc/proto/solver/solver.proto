@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package Solver;
+
+option go_package = "/gen/solver;solver";
+
+service SolverService {
+  rpc Solve(SolveRequest) returns (stream SolveEvent);
+}
+
+message SolveRequest {
+  string job_id         = 1;
+  repeated double obj   = 2;
+  repeated double rhs   = 3;
+  repeated double A     = 4;
+  int32 num_vars        = 5;
+  int32 num_constraints = 6;
+}
+
+message SolveEvent {
+  string job_id   = 1;
+  string type     = 2; // "assigned" | "progress" | "done" | "failed"
+  int32  pct      = 3; // progress percentage, 0 if not applicable
+  int32  iterations = 4;
+  double objective  = 5; // only on "done"
+  repeated double solution = 6; // only on "done"
+  string reason   = 7; // only on "failed"
+  int64  solve_ms = 8; // only on "done"
+}
