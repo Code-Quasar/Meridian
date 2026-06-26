@@ -7,8 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Code-Quasar/Meridian/internal/callbacks"
 	"github.com/Code-Quasar/Meridian/internal/gateway"
+	"github.com/Code-Quasar/Meridian/internal/grpc/gen/solver"
 	"github.com/Code-Quasar/Meridian/internal/queue"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/grpc"
 )
 
 // this is the main function of Server A.
@@ -23,26 +27,17 @@ func main() {
 	log.Println("Starting Meridian Server A ...")
 	reg := gateway.EstablishTCP(":9000", ":9093", "jobs-small")
 
-	messages := queue.ReadFromQueue("jobs-small", "1234")
-
-	for m := range messages {
-		clientID := string(m.Key)
-		msgValue := string(m.Value)
-
-		connInfo, exists := reg.GetConnection(clientID)
-		if !exists {
-			continue
-		}
-
-		// Use a non-blocking select to put the message
-		select {
-		case connInfo.Response <- msgValue:
-		default:
-			go func(ch chan string, data string) {
-				ch <- data
-			}(connInfo.Response, msgValue)
-		}
+	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure()) // Adjust address/credentials
+	if err != nil {
+		log.Fatalf("Failed to connect to Server B via gRPC: %v", err)
 	}
+	defer conn.Close()
+
+	grpcClient := solver.NewSolverServiceClient(conn)
+
+	queue.ReadFromQueue("jobs-small", "1234", func(msg kafka.Message) {
+		callbacks.SendToGRPC(reg, grpcClient, msg)
+	})
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

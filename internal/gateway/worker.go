@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/Code-Quasar/Meridian/internal/grpc/gen/solver"
 	"github.com/Code-Quasar/Meridian/internal/queue"
 	"github.com/Code-Quasar/Meridian/internal/registry"
 	"github.com/google/uuid"
@@ -16,6 +17,18 @@ import (
 func IsValidReq(req string) bool {
 	return true
 }
+
+func parsePayload(jobID string, msg string) *solver.SolveRequest {
+	return &solver.SolveRequest{
+		JobId:          jobID,
+		Obj:            []float64{1.0, 2.0},
+		Rhs:            []float64{10.0},
+		A:              []float64{1.0, 1.0},
+		NumVars:        2,
+		NumConstraints: 1,
+	}
+}
+
 func handleConnection(conn net.Conn, reg *registry.ConnRegistry, producer *kafka.Writer) {
 
 	// Handle Auth
@@ -38,14 +51,14 @@ func handleConnection(conn net.Conn, reg *registry.ConnRegistry, producer *kafka
 	}
 
 	scanner := bufio.NewScanner(conn)
-	var validReq string
+	var validReq *solver.SolveRequest
 
 	// scan if valid do the work and
 	for scanner.Scan() {
 		msg := scanner.Text()
 
 		if IsValidReq(msg) {
-			validReq = msg
+			validReq = parsePayload(id.String(), msg)
 			err := conn.SetReadDeadline(time.Time{})
 			if err != nil {
 				return

@@ -21,7 +21,7 @@ func main() {
 		}
 	}()
 
-	// Inside your main.go file
+	// Inside your client.go file
 	sharedWriter := &kafka.Writer{
 		Addr:     kafka.TCP("127.0.0.1:9093"),
 		Topic:    "jobs-small",

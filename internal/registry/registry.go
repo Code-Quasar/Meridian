@@ -3,11 +3,13 @@ package registry
 import (
 	"net"
 	"sync"
+
+	"github.com/Code-Quasar/Meridian/internal/grpc/gen/solver"
 )
 
 type ConnInfo struct {
 	Conn     net.Conn
-	Response chan string
+	Response chan solver.SolveEvent
 }
 
 type ConnRegistry struct {

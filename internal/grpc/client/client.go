@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/Code-Quasar/Meridian/internal/grpc/gen/solver"
 )
 
-func clientSolve(ctx context.Context, client solver.SolverServiceClient, req *solver.SolveRequest) <-chan *solver.SolveEvent {
+func ClientSolve(ctx context.Context, client solver.SolverServiceClient, req *solver.SolveRequest) <-chan *solver.SolveEvent {
 
 	ch := make(chan *solver.SolveEvent)
 
@@ -24,7 +24,6 @@ func clientSolve(ctx context.Context, client solver.SolverServiceClient, req *so
 				break
 			}
 
-			// needed to use context cancel outside to quit this
 			select {
 			case ch <- result:
 			case <-ctx.Done():
