@@ -29,13 +29,17 @@ func parsePayload(jobID string, msg string) *solver.SolveRequest {
 	}
 }
 
+func parseEvent(req solver.SolveEvent) string {
+	return ""
+}
+
 func handleConnection(conn net.Conn, reg *registry.ConnRegistry, producer *kafka.Writer) {
 
 	// Handle Auth
 
 	// Add to registry (create unique ID)
 	id, _ := uuid.NewUUID() // must read UUID doc
-	msg := make(chan string, 200)
+	msg := make(chan solver.SolveEvent, 200)
 	connInfo := registry.ConnInfo{Conn: conn, Response: msg}
 	reg.AddConnection(id.String(), connInfo)
 
@@ -72,7 +76,7 @@ func handleConnection(conn net.Conn, reg *registry.ConnRegistry, producer *kafka
 
 	// send back results to the client
 	for msg := range connInfo.Response {
-		_, err := fmt.Fprintf(conn, msg)
+		_, err := fmt.Fprintf(conn, parseEvent(msg))
 		if err != nil {
 			log.Printf("Failed to write to client %s, connection likely lost: %v\n", id.String(), err)
 			break
