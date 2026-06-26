@@ -1,5 +1,16 @@
 package main
 
+import (
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/Code-Quasar/Meridian/internal/gateway"
+	"github.com/Code-Quasar/Meridian/internal/queue"
+)
+
 // this is the main function of Server A.
 // this contains :
 // - an ApiGateway that send solver requests to kafka producer
@@ -9,12 +20,32 @@ package main
 
 func main() {
 
-	// Here the implementation of the api gateway and the socket between user and server
+	log.Println("Starting Meridian Server A ...")
+	reg := gateway.EstablishTCP(":9000", ":9093", "jobs-small")
 
-	// the api gateway route it to the kafka producer
+	messages := queue.ReadFromQueue("jobs-small", "1234")
 
-	// the consumer consume what it could consume and make gRPC requests
+	for m := range messages {
+		clientID := string(m.Key)
+		msgValue := string(m.Value)
 
-	// send results to the socket
+		connInfo, exists := reg.GetConnection(clientID)
+		if !exists {
+			continue
+		}
 
+		// Use a non-blocking select to put the message
+		select {
+		case connInfo.Response <- msgValue:
+		default:
+			go func(ch chan string, data string) {
+				ch <- data
+			}(connInfo.Response, msgValue)
+		}
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	<-sigChan
+	fmt.Println("Server A shut down . . .")
 }

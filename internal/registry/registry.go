@@ -5,23 +5,24 @@ import (
 	"sync"
 )
 
+type ConnInfo struct {
+	Conn     net.Conn
+	Response chan string
+}
+
 type ConnRegistry struct {
-	connexions map[string]net.Conn
+	connexions map[string]ConnInfo
 	mu         sync.RWMutex
 }
 
-func CreateUniqueID() string {
-	return "id"
-}
-
 func NewRegistry() *ConnRegistry {
-	return &ConnRegistry{connexions: make(map[string]net.Conn)}
+	return &ConnRegistry{connexions: make(map[string]ConnInfo)}
 }
 
-func (cr *ConnRegistry) AddConnection(id string, conn net.Conn) {
+func (cr *ConnRegistry) AddConnection(id string, connInfo ConnInfo) {
 	cr.mu.Lock()
 	defer cr.mu.Unlock()
-	cr.connexions[id] = conn
+	cr.connexions[id] = connInfo
 }
 
 func (cr *ConnRegistry) DeleteConnection(conID string) {
@@ -31,7 +32,7 @@ func (cr *ConnRegistry) DeleteConnection(conID string) {
 	delete(cr.connexions, conID)
 }
 
-func (cr *ConnRegistry) GetConnection(connID string) (net.Conn, bool) {
+func (cr *ConnRegistry) GetConnection(connID string) (ConnInfo, bool) {
 	cr.mu.RLock()
 	defer cr.mu.RUnlock()
 
