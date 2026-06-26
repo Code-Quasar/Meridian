@@ -29,11 +29,12 @@ Meridian/
 ├── internal/
 │   ├── gateway/
 │   │   ├── gateway.go        # TCP listener + connection lifecycle
-│   │   └── handler.go        # Per-connection read/write loop
+│   │   └── worker.go        # Per-connection read/write loop
 │   ├── queue/
-│   │   └── queue.go          # Kafka producer/consumer
+│   │   └── consumer.go          # Kafka consumer
+│   │   └── producer.go          # Kafka producer
 │   ├── callbacks/
-│   │   └── callbacks.go      # Bridges gRPC stream → client socket
+│   │   └── grpcCallback.go      # Bridges gRPC stream → client socket
 │   ├── registry/
 │   │   └── registry.go       # Thread-safe map of active connections
 │   └── grpc/
@@ -45,7 +46,7 @@ Meridian/
 
 **Non-blocking accept loop** — each incoming TCP connection is handed off to a goroutine immediately, so the listener never stalls waiting on a slow client.
 
-**Connection registry** — since Kafka processing is async, we need a way to route results back to the right socket. The registry is just a `sync.Map` keyed by the session UUID assigned at connection time. Connections self-remove on disconnect via `defer`.
+**Connection registry** — since Kafka processing is async, we need a way to route results back to the right socket. The registry is just a `struct` keyed by the session UUID assigned at connection time. Connections self-remove on disconnect via `defer`.
 
 **Callback pipeline** — `callbacks.SendToGRPC` wires the Kafka consumer directly to the gRPC stream, then pipes updates into the registry's mailbox for that session. This keeps `main.go` clean and avoids global state.
 
@@ -55,7 +56,7 @@ The networking infrastructure works end-to-end: TCP ingestion → Kafka → gRPC
 
 What isn't done yet:
 
-- **Actual LP solver** — Server B currently returns simulated progress events. HiGHS integration is planned.
+- **Actual LP solver** — Server B currently returns simulated progress events.
 - **Persistence** — no database yet, everything lives in memory.
 - **Management API** — only the raw TCP ingestion port is exposed.
 
